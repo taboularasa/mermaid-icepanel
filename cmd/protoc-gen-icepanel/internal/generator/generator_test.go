@@ -1,3 +1,4 @@
+// Package generator contains tests for the generator logic for IcePanel integration.
 package generator
 
 import (
@@ -18,7 +19,8 @@ func TestProcessProtoFile(t *testing.T) {
 			name    string
 			comment string
 		}
-		expected []C4Object
+		speculativePathPrefix string
+		expected              []C4Object
 	}{
 		{
 			name:     "basic file with one service",
@@ -33,20 +35,23 @@ func TestProcessProtoFile(t *testing.T) {
 					comment: "// User management service",
 				},
 			},
+			speculativePathPrefix: "",
 			expected: []C4Object{
 				{
-					ID:          "boundary-example.service",
-					Name:        "example.service",
-					Description: "Package: example.service",
-					Type:        C4SystemBoundary,
-					Package:     "example.service",
+					ID:            "boundary-example.service",
+					Name:          "example.service",
+					Description:   "Package: example.service",
+					Type:          C4SystemBoundary,
+					Package:       "example.service",
+					IsSpeculative: false,
 				},
 				{
-					ID:          "service-UserService",
-					Name:        "UserService",
-					Description: "//// User management service\n",
-					Type:        C4System,
-					Package:     "example.service",
+					ID:            "service-UserService",
+					Name:          "UserService",
+					Description:   "//// User management service\n",
+					Type:          C4System,
+					Package:       "example.service",
+					IsSpeculative: false,
 				},
 			},
 		},
@@ -67,27 +72,64 @@ func TestProcessProtoFile(t *testing.T) {
 					comment: "// Authentication service",
 				},
 			},
+			speculativePathPrefix: "",
 			expected: []C4Object{
 				{
-					ID:          "boundary-example.multi",
-					Name:        "example.multi",
-					Description: "Package: example.multi",
-					Type:        C4SystemBoundary,
-					Package:     "example.multi",
+					ID:            "boundary-example.multi",
+					Name:          "example.multi",
+					Description:   "Package: example.multi",
+					Type:          C4SystemBoundary,
+					Package:       "example.multi",
+					IsSpeculative: false,
 				},
 				{
-					ID:          "service-UserService",
-					Name:        "UserService",
-					Description: "//// User management service\n",
-					Type:        C4System,
-					Package:     "example.multi",
+					ID:            "service-UserService",
+					Name:          "UserService",
+					Description:   "//// User management service\n",
+					Type:          C4System,
+					Package:       "example.multi",
+					IsSpeculative: false,
 				},
 				{
-					ID:          "service-AuthService",
-					Name:        "AuthService",
-					Description: "//// Authentication service\n",
-					Type:        C4System,
-					Package:     "example.multi",
+					ID:            "service-AuthService",
+					Name:          "AuthService",
+					Description:   "//// Authentication service\n",
+					Type:          C4System,
+					Package:       "example.multi",
+					IsSpeculative: false,
+				},
+			},
+		},
+		{
+			name:     "speculative proto file",
+			fileName: "tdd/protos/speculative_service.proto",
+			pkg:      "tdd.protos.speculative",
+			services: []struct {
+				name    string
+				comment string
+			}{
+				{
+					name:    "SpeculativeService",
+					comment: "// Speculative service for TDD",
+				},
+			},
+			speculativePathPrefix: "tdd/protos/",
+			expected: []C4Object{
+				{
+					ID:            "boundary-tdd.protos.speculative",
+					Name:          "tdd.protos.speculative",
+					Description:   "Package: tdd.protos.speculative",
+					Type:          C4SystemBoundary,
+					Package:       "tdd.protos.speculative",
+					IsSpeculative: true,
+				},
+				{
+					ID:            "service-SpeculativeService",
+					Name:          "SpeculativeService",
+					Description:   "//// Speculative service for TDD\n",
+					Type:          C4System,
+					Package:       "tdd.protos.speculative",
+					IsSpeculative: true,
 				},
 			},
 		},
@@ -117,10 +159,7 @@ func TestProcessProtoFile(t *testing.T) {
 			}
 
 			// Process the file
-			result, err := processProtoFile(file)
-			if err != nil {
-				t.Fatalf("processProtoFile failed: %v", err)
-			}
+			result := processProtoFile(file, tt.speculativePathPrefix)
 
 			// Check that the result matches expectations
 			if !reflect.DeepEqual(result, tt.expected) {

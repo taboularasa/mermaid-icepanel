@@ -104,12 +104,12 @@ func TestIcePanelClient_PostDiagram(t *testing.T) {
 						return nil, fmt.Errorf("expected POST method, got %s", req.Method)
 					}
 
-					url := "https://api.test/landscapes/land123/versions/ver123/diagrams"
+					url := "https://test.api.com/landscapes/landscape1/versions/version1/diagrams"
 					if req.URL.String() != url {
 						return nil, fmt.Errorf("unexpected URL: %s", req.URL.String())
 					}
 
-					return NewMockResponse(http.StatusCreated, `{"id":"diag123"}`), nil
+					return NewMockResponse(tt.statusCode, tt.respBody), nil
 				},
 			}
 

@@ -203,13 +203,13 @@ This section outlines the sequential implementation tasks as a series of issues,
 - [x] Create C4 model mapping logic from Proto to IcePanel objects 
 - [x] Implement service classification logic (internal/external/database)
 - [x] Extract metadata from Proto comments
-- [ ] Add support for `tdd/protos/` directory for speculative services:
-    - [ ] Define plugin parameter to specify `tdd/protos/` path(s) or adopt a convention.
-    - [ ] Modify plugin to identify files originating from `tdd/protos/` (e.g., by checking `file.Desc.Path()` against the specified path).
-    - [ ] Determine strategy for distinguishing/tagging C4 objects from speculative protos (e.g., metadata field, naming convention).
-- [ ] Add proto validation to ensure correctness
+- [x] Add support for `tdd/protos/` directory for speculative services:
+    - [x] Define plugin parameter to specify `tdd/protos/` path(s) or adopt a convention.
+    - [x] Modify plugin to identify files originating from `tdd/protos/` (e.g., by checking `file.Desc.Path()` against the specified path).
+    - [x] Determine strategy for distinguishing/tagging C4 objects from speculative protos (e.g., metadata field, naming convention).
+- [ ] Add proto validation to ensure correctness (syntax validation is handled by protoc; code is robust to missing fields)
 - [x] Create tests with sample Proto files
-    - [ ] Extend tests to cover speculative services from `tdd/protos/`
+    - [x] Extend tests to cover speculative services from `tdd/protos/`
 - [ ] Support BSR integration for retrieving existing service definitions
     - [ ] Clarify how BSR-sourced protos and `tdd/protos/` are processed together (e.g., separate plugin invocations, merged input, order of precedence if conflicts).
 
