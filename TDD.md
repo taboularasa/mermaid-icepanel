@@ -110,6 +110,13 @@ The Mermaid-to-IcePanel tool will enforce these rules:
 3. Connection endpoints must be valid object identifiers
 4. Bidirectional relationships use the BiRel syntax
 
+### 3.5 Non-Functional Requirements for Speculative Service Processing
+
+1.  **Configurability**: The `protoc-gen-icepanel` plugin should be configurable to locate `tdd/protos/` directories (e.g., via command-line options to `protoc` that are passed as plugin parameters).
+2.  **Clarity of Origin**: It must be clear, potentially in the generated output or via specific tagging of IcePanel objects, whether a service definition originates from a speculative `tdd/protos/` source or a primary source like BSR.
+3.  **Idempotency**: Reprocessing the same set of `tdd/protos/` files multiple times should consistently produce the same logical output in IcePanel.
+4.  **Error Handling**: The system should gracefully handle scenarios such as a missing `tdd/protos/` directory or malformed (though syntactically valid protobuf) files within it. `protoc` itself will likely catch protobuf syntax errors prior to plugin execution.
+
 ## 4. Workflow
 
 ### 4.1 Service Definition Workflow
@@ -195,11 +202,16 @@ This section outlines the sequential implementation tasks as a series of issues,
 - [x] Implement proto descriptor processor in generator package
 - [x] Create C4 model mapping logic from Proto to IcePanel objects 
 - [x] Implement service classification logic (internal/external/database)
-- [ ] Extract metadata from Proto comments
-- [ ] Add support for `tdd/protos/` directory for speculative services
+- [x] Extract metadata from Proto comments
+- [ ] Add support for `tdd/protos/` directory for speculative services:
+    - [ ] Define plugin parameter to specify `tdd/protos/` path(s) or adopt a convention.
+    - [ ] Modify plugin to identify files originating from `tdd/protos/` (e.g., by checking `file.Desc.Path()` against the specified path).
+    - [ ] Determine strategy for distinguishing/tagging C4 objects from speculative protos (e.g., metadata field, naming convention).
 - [ ] Add proto validation to ensure correctness
 - [x] Create tests with sample Proto files
+    - [ ] Extend tests to cover speculative services from `tdd/protos/`
 - [ ] Support BSR integration for retrieving existing service definitions
+    - [ ] Clarify how BSR-sourced protos and `tdd/protos/` are processed together (e.g., separate plugin invocations, merged input, order of precedence if conflicts).
 
 ### Issue 3: IcePanel Object Management (Can run in parallel with Issue 2)
 
