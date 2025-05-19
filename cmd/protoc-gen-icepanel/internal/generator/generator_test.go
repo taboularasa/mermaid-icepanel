@@ -8,86 +8,29 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// Mock proto file descriptor for testing
-type mockProtoFile struct {
-	protogen.File
-	path        string
-	pkg         protoreflect.FullName
-	svcs        []*mockService
-	isGenerated bool
-}
-
-type mockService struct {
-	name    protoreflect.Name
-	comment string
-}
-
-func (m *mockProtoFile) Desc() protogen.FileDescriptor {
-	return &mockFileDescriptor{
-		path: m.path,
-		pkg:  m.pkg,
-	}
-}
-
-func (m *mockProtoFile) Services() []*protogen.Service {
-	services := make([]*protogen.Service, len(m.svcs))
-	for i, svc := range m.svcs {
-		services[i] = &protogen.Service{
-			Comments: protogen.CommentSet{
-				Leading: protogen.Comments(svc.comment),
-			},
-			Desc: &mockServiceDescriptor{
-				name: svc.name,
-			},
-		}
-	}
-	return services
-}
-
-func (m *mockProtoFile) Generate() bool {
-	return m.isGenerated
-}
-
-type mockFileDescriptor struct {
-	protogen.FileDescriptor
-	path string
-	pkg  protoreflect.FullName
-}
-
-func (m *mockFileDescriptor) Path() string {
-	return m.path
-}
-
-func (m *mockFileDescriptor) Package() protoreflect.FullName {
-	return m.pkg
-}
-
-type mockServiceDescriptor struct {
-	protogen.ServiceDescriptor
-	name protoreflect.Name
-}
-
-func (m *mockServiceDescriptor) Name() protoreflect.Name {
-	return m.name
-}
-
+// TestProcessProtoFile tests the processProtoFile function with real protogen.File instances
 func TestProcessProtoFile(t *testing.T) {
 	tests := []struct {
 		name     string
-		file     *mockProtoFile
+		fileName string
+		pkg      string
+		services []struct {
+			name    string
+			comment string
+		}
 		expected []C4Object
 	}{
 		{
-			name: "basic file with one service",
-			file: &mockProtoFile{
-				path:        "example/service.proto",
-				pkg:         "example.service",
-				isGenerated: true,
-				svcs: []*mockService{
-					{
-						name:    "UserService",
-						comment: "// User management service",
-					},
+			name:     "basic file with one service",
+			fileName: "example/service.proto",
+			pkg:      "example.service",
+			services: []struct {
+				name    string
+				comment string
+			}{
+				{
+					name:    "UserService",
+					comment: "// User management service",
 				},
 			},
 			expected: []C4Object{
@@ -101,27 +44,27 @@ func TestProcessProtoFile(t *testing.T) {
 				{
 					ID:          "service-UserService",
 					Name:        "UserService",
-					Description: "// User management service",
+					Description: "//// User management service\n",
 					Type:        C4System,
 					Package:     "example.service",
 				},
 			},
 		},
 		{
-			name: "file with multiple services",
-			file: &mockProtoFile{
-				path:        "example/multi.proto",
-				pkg:         "example.multi",
-				isGenerated: true,
-				svcs: []*mockService{
-					{
-						name:    "UserService",
-						comment: "// User management service",
-					},
-					{
-						name:    "AuthService",
-						comment: "// Authentication service",
-					},
+			name:     "file with multiple services",
+			fileName: "example/multi.proto",
+			pkg:      "example.multi",
+			services: []struct {
+				name    string
+				comment string
+			}{
+				{
+					name:    "UserService",
+					comment: "// User management service",
+				},
+				{
+					name:    "AuthService",
+					comment: "// Authentication service",
 				},
 			},
 			expected: []C4Object{
@@ -135,14 +78,14 @@ func TestProcessProtoFile(t *testing.T) {
 				{
 					ID:          "service-UserService",
 					Name:        "UserService",
-					Description: "// User management service",
+					Description: "//// User management service\n",
 					Type:        C4System,
 					Package:     "example.multi",
 				},
 				{
 					ID:          "service-AuthService",
 					Name:        "AuthService",
-					Description: "// Authentication service",
+					Description: "//// Authentication service\n",
 					Type:        C4System,
 					Package:     "example.multi",
 				},
@@ -152,16 +95,85 @@ func TestProcessProtoFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := processProtoFile(tt.file)
+			// Create a file with the descriptor
+			file := &protogen.File{
+				GoPackageName: protogen.GoPackageName(tt.pkg),
+				Generate:      true,
+			}
+
+			// Create the file descriptor
+			file.Desc = createFileDescriptor(tt.fileName, tt.pkg)
+
+			// Create services for the file
+			for _, svc := range tt.services {
+				serviceDesc := createServiceDescriptor(file.Desc, svc.name)
+				service := &protogen.Service{
+					Comments: protogen.CommentSet{
+						Leading: protogen.Comments(svc.comment),
+					},
+					Desc: serviceDesc,
+				}
+				file.Services = append(file.Services, service)
+			}
+
+			// Process the file
+			result, err := processProtoFile(file)
 			if err != nil {
 				t.Fatalf("processProtoFile failed: %v", err)
 			}
 
+			// Check that the result matches expectations
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("processProtoFile result mismatch\nwant: %+v\ngot:  %+v", tt.expected, result)
 			}
 		})
 	}
+}
+
+// Helper function to create a file descriptor for testing
+func createFileDescriptor(path string, pkg string) protoreflect.FileDescriptor {
+	return &testFileDescriptor{
+		path: path,
+		pkg:  protoreflect.FullName(pkg),
+	}
+}
+
+// Helper function to create a service descriptor for testing
+func createServiceDescriptor(file protoreflect.FileDescriptor, name string) protoreflect.ServiceDescriptor {
+	return &testServiceDescriptor{
+		file: file,
+		name: protoreflect.Name(name),
+	}
+}
+
+// Test implementation of FileDescriptor
+type testFileDescriptor struct {
+	protoreflect.FileDescriptor
+	path string
+	pkg  protoreflect.FullName
+}
+
+func (fd *testFileDescriptor) Path() string {
+	return fd.path
+}
+
+func (fd *testFileDescriptor) Package() protoreflect.FullName {
+	return fd.pkg
+}
+
+// Test implementation of ServiceDescriptor
+type testServiceDescriptor struct {
+	protoreflect.ServiceDescriptor
+	file protoreflect.FileDescriptor
+	name protoreflect.Name
+}
+
+func (sd *testServiceDescriptor) Name() protoreflect.Name {
+	return sd.name
+}
+
+func (sd *testServiceDescriptor) Parent() protoreflect.Descriptor {
+	return sd.file
 }
 
 func TestDetermineServiceType(t *testing.T) {
