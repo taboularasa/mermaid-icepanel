@@ -197,3 +197,203 @@ func (c *IcePanelClient) PostDiagram(ctx context.Context, lc, ver string, d *Dia
 	log.Printf("New diagram id %s", out.ID)
 	return nil
 }
+
+// CreateObject creates a new object in IcePanel.
+func (c *IcePanelClient) CreateObject(ctx context.Context, lc, ver string, obj *Object, dryRun bool) error {
+	if dryRun {
+		log.Printf("[Dry-Run] Would create object: %+v in landscape %s, version %s", obj, lc, ver)
+		return nil
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return fmt.Errorf("failed to marshal object: %w", err)
+	}
+	url := fmt.Sprintf("%s/landscapes/%s/versions/%s/model/objects", c.baseURL, lc, ver)
+	resp, err := c.call(ctx, "POST", url, b)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("Error closing response body: %v", cerr)
+		}
+	}()
+	if resp.StatusCode >= 300 {
+		return errors.New(resp.Status)
+	}
+	return nil
+}
+
+// UpdateObject updates an existing object in IcePanel by handle ID.
+func (c *IcePanelClient) UpdateObject(ctx context.Context, lc, ver, handle string, obj *Object, dryRun bool) error {
+	if dryRun {
+		log.Printf("[Dry-Run] Would update object %s: %+v in landscape %s, version %s", handle, obj, lc, ver)
+		return nil
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return fmt.Errorf("failed to marshal object: %w", err)
+	}
+	url := fmt.Sprintf("%s/landscapes/%s/versions/%s/model/objects/%s", c.baseURL, lc, ver, handle)
+	resp, err := c.call(ctx, "PUT", url, b)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("Error closing response body: %v", cerr)
+		}
+	}()
+	if resp.StatusCode >= 300 {
+		return errors.New(resp.Status)
+	}
+	return nil
+}
+
+// GetObject retrieves an object by handle ID.
+func (c *IcePanelClient) GetObject(ctx context.Context, lc, ver, handle string) (*Object, error) {
+	url := fmt.Sprintf("%s/landscapes/%s/versions/%s/model/objects/%s", c.baseURL, lc, ver, handle)
+	resp, err := c.call(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("Error closing response body: %v", cerr)
+		}
+	}()
+	if resp.StatusCode >= 300 {
+		return nil, errors.New(resp.Status)
+	}
+	var obj Object
+	if err := json.NewDecoder(resp.Body).Decode(&obj); err != nil {
+		return nil, err
+	}
+	return &obj, nil
+}
+
+// ListObjects retrieves all objects for a given landscape and version.
+func (c *IcePanelClient) ListObjects(ctx context.Context, lc, ver string) ([]*Object, error) {
+	url := fmt.Sprintf("%s/landscapes/%s/versions/%s/model/objects?per=1000", c.baseURL, lc, ver)
+	resp, err := c.call(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("Error closing response body: %v", cerr)
+		}
+	}()
+	if resp.StatusCode >= 300 {
+		return nil, errors.New(resp.Status)
+	}
+	var out struct {
+		Data []*Object `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// Equal compares two IcePanel objects for logical equality (ignores Handle).
+func (o *Object) Equal(other *Object) bool {
+	if o == nil || other == nil {
+		return o == other
+	}
+	if o.Name != other.Name || o.Desc != other.Desc || o.Type != other.Type {
+		return false
+	}
+	if len(o.Props) != len(other.Props) {
+		return false
+	}
+	for k, v := range o.Props {
+		if ov, ok := other.Props[k]; !ok || !equalInterface(v, ov) {
+			return false
+		}
+	}
+	return true
+}
+
+// Diff returns a map of fields that differ between two objects (ignores Handle).
+func (o *Object) Diff(other *Object) map[string][2]interface{} {
+	diff := make(map[string][2]interface{})
+	if o == nil || other == nil {
+		diff["nil"] = [2]interface{}{o, other}
+		return diff
+	}
+	if o.Name != other.Name {
+		diff["Name"] = [2]interface{}{o.Name, other.Name}
+	}
+	if o.Desc != other.Desc {
+		diff["Desc"] = [2]interface{}{o.Desc, other.Desc}
+	}
+	if o.Type != other.Type {
+		diff["Type"] = [2]interface{}{o.Type, other.Type}
+	}
+	// Compare Props
+	for k, v := range o.Props {
+		if ov, ok := other.Props[k]; !ok || !equalInterface(v, ov) {
+			diff["Props."+k] = [2]interface{}{v, ov}
+		}
+	}
+	for k, v := range other.Props {
+		if _, ok := o.Props[k]; !ok {
+			diff["Props."+k] = [2]interface{}{nil, v}
+		}
+	}
+	return diff
+}
+
+// equalInterface compares two interface{} values for equality.
+func equalInterface(a, b interface{}) bool {
+	aj, errA := json.Marshal(a)
+	bj, errB := json.Marshal(b)
+	if errA != nil || errB != nil {
+		return false
+	}
+	return bytes.Equal(aj, bj)
+}
+
+// ValidateLandscapeVersion checks if the given landscape and version exist in IcePanel.
+func (c *IcePanelClient) ValidateLandscapeVersion(ctx context.Context, lc, ver string) error {
+	// Check landscape
+	url := fmt.Sprintf("%s/landscapes/%s", c.baseURL, lc)
+	resp, err := c.call(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to check landscape: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("Error closing response body: %v", cerr)
+		}
+	}()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("landscape %s not found (status %s)", lc, resp.Status)
+	}
+	// Check version
+	url = fmt.Sprintf("%s/landscapes/%s/versions/%s", c.baseURL, lc, ver)
+	resp, err = c.call(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to check version: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("Error closing response body: %v", cerr)
+		}
+	}()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("version %s not found in landscape %s (status %s)", ver, lc, resp.Status)
+	}
+	return nil
+}
+
+// WipeVersionIfRequested wipes the version if the wipe flag is true.
+func (c *IcePanelClient) WipeVersionIfRequested(ctx context.Context, lc, ver string, wipe bool) error {
+	if !wipe {
+		log.Printf("Skipping wipe for landscape %s, version %s", lc, ver)
+		return nil
+	}
+	log.Printf("Wiping IcePanel version: landscape=%s, version=%s", lc, ver)
+	return c.WipeVersion(ctx, lc, ver)
+}

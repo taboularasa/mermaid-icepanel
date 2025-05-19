@@ -1,13 +1,14 @@
 # Mermaid IcePanel
 
-A CLI tool that converts Mermaid C4 (System-Context subset) diagrams to IcePanel diagrams.
+A toolkit for converting service definitions and architecture diagrams to IcePanel.
 
 ## Features
 
 - Convert Mermaid C4 diagrams to IcePanel format
+- Extract service definitions from Protocol Buffer files
 - Support for Person, System, System_Ext, SystemDb, and System_Boundary elements
 - Support for relationships (Rel and BiRel)
-- Option to wipe existing content in an IcePanel version
+- Option to wipe existing content in an IcePanel version before importing
 - Environment variable configuration
 - Modular architecture with dependency injection for testability
 
@@ -17,14 +18,18 @@ The project is organized into these packages:
 
 ```
 mermaid-icepanel/
+├── cmd/
+│   └── protoc-gen-icepanel/  # Protocol Buffer plugin
+│       ├── internal/         # Plugin internals
+│       └── upload/           # Object uploader tool
 ├── internal/
-│   ├── api/       # IcePanel API client
-│   ├── config/    # Configuration handling
-│   └── parser/    # Mermaid diagram parser
-├── .env.example   # Example environment variables
-├── justfile       # Task runner commands
-├── main.go        # Entry point
-└── README.md      # This file
+│   ├── api/                  # IcePanel API client
+│   ├── config/               # Configuration handling
+│   └── parser/               # Mermaid diagram parser
+├── .env.example              # Example environment variables
+├── justfile                  # Task runner commands
+├── main.go                   # CLI entry point for Mermaid tool
+└── README.md                 # This file
 ```
 
 ## Installation
@@ -33,6 +38,7 @@ mermaid-icepanel/
 
 - Go 1.16+
 - [Just](https://github.com/casey/just) command runner (optional but recommended)
+- Protocol Buffer compiler (protoc) for the protoc-gen-icepanel plugin
 
 ### Building from source
 
@@ -41,11 +47,14 @@ mermaid-icepanel/
 git clone https://github.com/yourusername/mermaid-icepanel.git
 cd mermaid-icepanel
 
-# Build using Go directly
-go build -o mermaid-icepanel main.go
-
-# Or build using Just
+# Build the Mermaid-to-IcePanel tool
 just build
+
+# Build the protoc-gen-icepanel plugin
+just build-plugin
+
+# Build the uploader tool
+just build-uploader
 
 # Optional: Install to $GOPATH/bin
 just install
@@ -73,9 +82,11 @@ Available environment variables:
 
 ## Usage
 
-### Using Just
+### Mermaid-to-IcePanel Tool
 
-The easiest way to use the tool is with the included Just commands:
+#### Using Just
+
+The easiest way to use the Mermaid tool is with the included Just commands:
 
 ```bash
 # Display all available commands
@@ -91,7 +102,7 @@ just import path/to/diagram.mmd landscape-id version-id "Diagram Name" wipe
 just sync -mmd path/to/diagram.mmd -landscape landscape-id -version version-id -name "My Diagram" -wipe -v
 ```
 
-### Direct CLI Usage
+#### Direct CLI Usage
 
 ```bash
 # Basic usage
@@ -101,7 +112,7 @@ just sync -mmd path/to/diagram.mmd -landscape landscape-id -version version-id -
 ./mermaid-icepanel -mmd path/to/diagram.mmd -landscape landscape-id -version version-id -name "Diagram Name" -token your-token -wipe -v
 ```
 
-## Command Line Arguments
+#### Command Line Arguments
 
 | Flag | Description | Required |
 |------|-------------|----------|
@@ -112,6 +123,50 @@ just sync -mmd path/to/diagram.mmd -landscape landscape-id -version version-id -
 | `-token` | API token | No (falls back to ICEPANEL_TOKEN env variable) |
 | `-wipe` | Delete existing content before import | No |
 | `-v` | Verbose output | No |
+
+### Proto-to-IcePanel Tool
+
+The Proto-to-IcePanel tool consists of a protoc plugin and an uploader tool. It can extract service definitions from Proto files and upload them to IcePanel.
+
+#### Using Just
+
+```bash
+# Generate IcePanel objects from Proto files
+just generate-objects "path/to/*.proto" landscape-id version-id false
+
+# Generate with wipe option (will wipe existing content before import)
+just generate-objects "path/to/*.proto" landscape-id version-id true
+
+# Upload generated objects to IcePanel
+just upload-objects icepanel_objects.json verbose
+
+# Generate and upload in one step (with wipe option)
+just proto-to-icepanel "path/to/*.proto" landscape-id version-id true verbose
+```
+
+#### Direct Usage
+
+```bash
+# Generate IcePanel objects from Proto files
+protoc --icepanel_out=. \
+       --icepanel_opt=landscape=landscape-id,version=version-id,wipe=true \
+       path/to/*.proto
+
+# Upload generated objects to IcePanel
+./uploader -file icepanel_objects.json -v
+```
+
+#### Command Line Arguments for Uploader
+
+| Flag | Description | Required |
+|------|-------------|----------|
+| `-file` | Path to the generated objects file | No (defaults to "icepanel_objects.json") |
+| `-token` | API token | No (falls back to ICEPANEL_TOKEN env variable) |
+| `-landscape` | Override landscape ID from the file | No |
+| `-version` | Override version ID from the file | No |
+| `-dry-run` | Don't actually upload to IcePanel | No |
+| `-v` | Verbose output | No |
+| `-timeout` | Request timeout in seconds | No (defaults to 30) |
 
 ## Development
 
@@ -159,7 +214,7 @@ This design allows for easy mocking of external dependencies during testing.
 
 ## Mermaid C4 Syntax Support
 
-The tool supports the following Mermaid C4 syntax elements:
+The Mermaid tool supports the following Mermaid C4 syntax elements:
 
 ```
 Person(id, "Label", "Optional Description")

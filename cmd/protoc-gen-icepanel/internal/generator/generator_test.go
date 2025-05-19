@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// TestProcessProtoFile tests the processProtoFile function with real protogen.File instances
+// TestProcessProtoFile tests the processProtoFile function with real protogen.File instances.
 func TestProcessProtoFile(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -169,7 +169,7 @@ func TestProcessProtoFile(t *testing.T) {
 	}
 }
 
-// Helper function to create a file descriptor for testing
+// Helper function to create a file descriptor for testing.
 func createFileDescriptor(path string, pkg string) protoreflect.FileDescriptor {
 	return &testFileDescriptor{
 		path: path,
@@ -177,7 +177,7 @@ func createFileDescriptor(path string, pkg string) protoreflect.FileDescriptor {
 	}
 }
 
-// Helper function to create a service descriptor for testing
+// Helper function to create a service descriptor for testing.
 func createServiceDescriptor(file protoreflect.FileDescriptor, name string) protoreflect.ServiceDescriptor {
 	return &testServiceDescriptor{
 		file: file,
@@ -185,7 +185,7 @@ func createServiceDescriptor(file protoreflect.FileDescriptor, name string) prot
 	}
 }
 
-// Test implementation of FileDescriptor
+// Test implementation of FileDescriptor.
 type testFileDescriptor struct {
 	protoreflect.FileDescriptor
 	path string
@@ -200,7 +200,7 @@ func (fd *testFileDescriptor) Package() protoreflect.FullName {
 	return fd.pkg
 }
 
-// Test implementation of ServiceDescriptor
+// Test implementation of ServiceDescriptor.
 type testServiceDescriptor struct {
 	protoreflect.ServiceDescriptor
 	file protoreflect.FileDescriptor

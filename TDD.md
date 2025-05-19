@@ -218,13 +218,16 @@ This section outlines the sequential implementation tasks as a series of issues,
 **Description**: Develop the components for creating and managing objects in IcePanel.
 
 **Checklist**:
-- [ ] Implement IcePanel object creation
-- [ ] Create object update/merge logic
-- [ ] Develop object lookup and retrieval
-- [ ] Implement landscape/version management
-- [ ] Add support for object metadata
-- [ ] Create object comparison for change detection
-- [ ] Implement dry-run mode for validation
+- [x] Implement IcePanel object creation
+- [x] Create object update/merge logic
+- [x] Develop object lookup and retrieval
+- [x] Ensure correct landscape/version is targeted for all operations
+- [x] Wipe/clean version before pushing updates
+- [x] Validate existence of landscape/version before operations
+- [x] Handle errors gracefully if landscape/version is missing or inaccessible
+- [x] Add support for object metadata
+- [x] Create object comparison for change detection
+- [x] Implement dry-run mode for validation
 
 ### Issue 4: Proto-to-IcePanel Generator Integration
 
