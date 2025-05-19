@@ -11,7 +11,36 @@ import (
 	"mermaid-icepanel/cmd/protoc-gen-icepanel/internal/generator"
 )
 
+func printUsage() {
+	fmt.Fprintf(os.Stdout, `protoc-gen-icepanel: IcePanel C4 object generator plugin for protoc
+
+USAGE:
+  protoc --icepanel_out=speculative_protos_path_prefix=DIR:.
+
+This plugin is intended to be run by protoc. It reads a CodeGeneratorRequest from stdin and writes a CodeGeneratorResponse to stdout.
+
+Plugin options:
+  speculative_protos_path_prefix=DIR   Mark proto files under DIR as speculative (for TDD workflows)
+
+For more information, see the README or run with -h/--help.
+`)
+}
+
 func main() {
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" || arg == "--help" {
+			printUsage()
+			os.Exit(0)
+		}
+	}
+
+	// Check if stdin is a terminal (not being run by protoc)
+	fi, err := os.Stdin.Stat()
+	if err == nil && (fi.Mode()&os.ModeCharDevice) != 0 {
+		fmt.Fprintln(os.Stderr, "protoc-gen-icepanel: This plugin is intended to be run by protoc. Use -h for help.")
+		os.Exit(2)
+	}
+
 	// Read request from stdin
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {

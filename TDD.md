@@ -230,15 +230,17 @@ This section outlines the sequential implementation tasks as a series of issues,
 
 **Description**: Integrate the Proto processing and IcePanel object management components.
 
-**Checklist**:
-- [ ] Connect proto descriptor processor to IcePanel API client
-- [ ] Implement command-line interface for the plugin
+**Checklist (Safe to do in parallel with Issue 3):**
+- [x] Implement command-line interface for the plugin
 - [ ] Create configuration handling for plugin options
 - [ ] Add detailed logging and error reporting
+- [ ] Create comprehensive test suite with sample Proto files (for proto processing, not object management)
+- [ ] Add plugin usage documentation
+
+**Tasks to Defer Until Issue 3 is Complete:**
+- [ ] Connect proto descriptor processor to IcePanel API client
 - [ ] Implement object creation transaction handling
 - [ ] Add incremental update support for existing IcePanel objects
-- [ ] Create comprehensive test suite with sample Proto files
-- [ ] Add plugin usage documentation
 
 ### Issue 5: Mermaid C4 Parser (Can run in parallel with Issues 2-4)
 
