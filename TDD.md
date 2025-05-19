@@ -191,14 +191,15 @@ This section outlines the sequential implementation tasks as a series of issues,
 **Description**: Develop the system to extract service information from Proto files.
 
 **Checklist**:
-- [ ] Implement Proto file parser
-- [ ] Create BSR integration for retrieving existing service definitions
-- [ ] Develop mapping logic from Proto to C4 model objects
-- [ ] Create object extraction pipeline
-- [ ] Implement metadata extraction from Proto comments
-- [ ] Develop service classification logic (internal/external/database)
-- [ ] Add support for `tdd/protos/` directory parsing
-- [ ] Implement validation for Proto files
+- [x] Create protoc plugin structure (`cmd/protoc-gen-icepanel`)
+- [x] Implement proto descriptor processor in generator package
+- [x] Create C4 model mapping logic from Proto to IcePanel objects 
+- [x] Implement service classification logic (internal/external/database)
+- [ ] Extract metadata from Proto comments
+- [ ] Add support for `tdd/protos/` directory for speculative services
+- [ ] Add proto validation to ensure correctness
+- [x] Create tests with sample Proto files
+- [ ] Support BSR integration for retrieving existing service definitions
 
 ### Issue 3: IcePanel Object Management (Can run in parallel with Issue 2)
 
@@ -218,13 +219,14 @@ This section outlines the sequential implementation tasks as a series of issues,
 **Description**: Integrate the Proto processing and IcePanel object management components.
 
 **Checklist**:
-- [ ] Connect Proto parser to object creation pipeline
-- [ ] Implement command-line interface for the tool
-- [ ] Create configuration file support
-- [ ] Add logging and error reporting
-- [ ] Implement transaction handling for bulk updates
-- [ ] Create test suite with sample Proto files
-- [ ] Add documentation
+- [ ] Connect proto descriptor processor to IcePanel API client
+- [ ] Implement command-line interface for the plugin
+- [ ] Create configuration handling for plugin options
+- [ ] Add detailed logging and error reporting
+- [ ] Implement object creation transaction handling
+- [ ] Add incremental update support for existing IcePanel objects
+- [ ] Create comprehensive test suite with sample Proto files
+- [ ] Add plugin usage documentation
 
 ### Issue 5: Mermaid C4 Parser (Can run in parallel with Issues 2-4)
 
