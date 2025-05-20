@@ -1,29 +1,56 @@
+// Package main provides the protoc-gen-icepanel tool, a protoc plugin for IcePanel object generation.
 package main
 
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
+
+	"mermaid-icepanel/cmd/protoc-gen-icepanel/internal/generator"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
-
-	"mermaid-icepanel/cmd/protoc-gen-icepanel/internal/generator"
 )
 
+// protoc-gen-icepanel is a protoc plugin for generating IcePanel objects from proto files.
+//
+// Parameters:
+//   - landscape=<id>: The IcePanel landscape ID
+//   - version=<id>: The IcePanel version ID
+//   - wipe=true|false: Whether to wipe existing content before importing
+//   - speculative_protos_path_prefix=DIR: Mark proto files under DIR as speculative (for TDD workflows)
+//
+// Usage:
+//   protoc --icepanel_out=. \
+//          --icepanel_opt=landscape=123,version=456,wipe=true \
+//          example.proto
+//
+// This will:
+//   1. Extract objects from the proto files
+//   2. Generate a file named "icepanel_objects.json"
+//   3. Include wipe=true in the output to indicate the version should be wiped before pushing
+
 func printUsage() {
-	fmt.Fprintf(os.Stdout, `protoc-gen-icepanel: IcePanel C4 object generator plugin for protoc
+	_, err := fmt.Fprintf(os.Stdout, `protoc-gen-icepanel: IcePanel C4 object generator plugin for protoc
 
 USAGE:
-  protoc --icepanel_out=speculative_protos_path_prefix=DIR:.
+  protoc --icepanel_out=<options>:.
 
-This plugin is intended to be run by protoc. It reads a CodeGeneratorRequest from stdin and writes a CodeGeneratorResponse to stdout.
+This plugin is intended to be run by protoc. It reads a CodeGeneratorRequest 
+from stdin and writes a CodeGeneratorResponse to stdout.
 
 Plugin options:
+  landscape=<id>                       IcePanel landscape ID
+  version=<id>                         IcePanel version ID
+  wipe=true|false                      Whether to wipe existing content before importing
   speculative_protos_path_prefix=DIR   Mark proto files under DIR as speculative (for TDD workflows)
 
 For more information, see the README or run with -h/--help.
 `)
+	if err != nil {
+		log.Fatalf("Error writing usage information: %v", err)
+	}
 }
 
 func main() {

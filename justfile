@@ -28,6 +28,44 @@ import MERMAID_FILE LANDSCAPE_ID VERSION_ID NAME="Imported Diagram" WIPE="":
 sync *ARGS:
     go run main.go {{ARGS}}
 
+# Build and install the protoc-gen-icepanel plugin
+build-plugin:
+    go build -o $GOPATH/bin/protoc-gen-icepanel ./cmd/protoc-gen-icepanel
+
+# Build the uploader tool
+build-uploader:
+    go build -o uploader ./cmd/protoc-gen-icepanel/upload
+
+# Generate IcePanel objects from proto files
+generate-objects PROTO_FILES LANDSCAPE_ID VERSION_ID WIPE="false":
+    protoc --icepanel_out=. \
+           --icepanel_opt=landscape={{LANDSCAPE_ID}},version={{VERSION_ID}},wipe={{WIPE}} \
+           {{PROTO_FILES}}
+
+# Upload generated objects to IcePanel
+upload-objects FILE="icepanel_objects.json" VERBOSE="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VERBOSE_FLAG=""
+    if [ "{{VERBOSE}}" = "verbose" ]; then
+        VERBOSE_FLAG="-v"
+    fi
+    ./uploader -file {{FILE}} ${VERBOSE_FLAG}
+
+# Generate and upload in one step
+proto-to-icepanel PROTO_FILES LANDSCAPE_ID VERSION_ID WIPE="false" VERBOSE="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just build-plugin
+    just build-uploader
+    just generate-objects {{PROTO_FILES}} {{LANDSCAPE_ID}} {{VERSION_ID}} {{WIPE}}
+    
+    VERBOSE_FLAG=""
+    if [ "{{VERBOSE}}" = "verbose" ]; then
+        VERBOSE_FLAG="verbose"
+    fi
+    just upload-objects icepanel_objects.json ${VERBOSE_FLAG}
+
 # Run tests
 test:
     go test -v ./...
@@ -77,6 +115,8 @@ lint-fix: setup-lint
 clean:
     rm -f mermaid-icepanel
     rm -f coverage.out coverage.html
+    rm -f icepanel_objects.json
+    rm -f uploader
 
 # Install binary to $GOPATH/bin
 install:
